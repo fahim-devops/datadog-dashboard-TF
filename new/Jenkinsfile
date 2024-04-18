@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    
+    parameters {
+        // string(name: 'datadog_api_key', defaultValue: '', description: 'API key for Datadog')
+        // string(name: 'datadog_app_key', defaultValue: '', description: 'Application key for Datadog')
+        password(name: 'DATADOG_API_KEY', defaultValue: '', description: 'Enter the Datadog API key')
+        password(name: 'DATADOG_APP_KEY', defaultValue: '', description: 'Enter the Datadog application key')
+        // string(name: 'GIT_USERNAME', description: 'Git username')
+        // password(name: 'GIT_PASSWORD', description: 'Git password')
+    }
+    
+    stages {
+        stage('Checkout') {
+            // steps {
+            //     checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: 'https://github.com/daanishalam/transfers.git']]])
+            // }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'daanish-github', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+                    checkout([$class: 'GitSCM', branches: [[name: '*/main']], userRemoteConfigs: [[url: "https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/daanishalam/transfers.git"]]])
+                }
+            }
+        }
+        
+        stage('Terraform Plan') {
+                // withCredentials([string(datadog_api_key: "${params.datadog_api_key}", variable: 'DATADOG_API_KEY'),
+                //                   string(datadog_app_key: "${params.datadog_app_key}", variable: 'DATADOG_APP_KEY')]) {
+                //     sh 'terraform init -backend-config=backend.tfvars'
+                //     sh 'terraform plan -var datadog_api_key=${DATADOG_API_KEY} -var datadog_app_key=${DATADOG_APP_KEY}'
+                // withEnv(["DATADOG_API_KEY=${params.datadog_api_key}", "DATADOG_APP_KEY=${params.datadog_app_key}"]) {
+                // sh 'terraform init'
+                // sh "terraform plan -out=tfplan -var 'datadog_api_key=${params.datadog_api_key}' -var 'datadog_app_key=${params.datadog_app_key}'"
+                //     }
+                steps {
+                    // withCredentials([string(credentialsId: 'datadog-api-key', variable: 'DATADOG_API_KEY'), string(credentialsId: 'datadog-app-key', variable: 'DATADOG_APP_KEY')]) {
+                        sh "terraform init"
+                        sh "terraform plan -out=tfplan -var 'datadog_api_key=${DATADOG_API_KEY}' -var 'datadog_app_key=${DATADOG_APP_KEY}'"
+                }
+            }
+
+        stage('Terraform Apply') {
+            // steps {
+            //     // withCredentials([string(datadog_api_key: "${params.datadog_api_key}", variable: 'DATADOG_API_KEY'),
+            //     //                   string(datadog_app_key: "${params.datadog_app_key}", variable: 'DATADOG_APP_KEY')]) {
+            //         input message: 'Are you sure you want to apply the changes?', ok: 'Yes', parameters: []
+            //         sh 'terraform apply -var datadog_api_key=${DATADOG_API_KEY} -var datadog_app_key=${DATADOG_APP_KEY}'
+            //     }
+                steps {
+                    // withCredentials([string(credentialsId: 'datadog-api-key', variable: 'DATADOG_API_KEY'), string(credentialsId: 'datadog-app-key', variable: 'DATADOG_APP_KEY')]) {
+                        input message: 'Are you sure you want to apply the changes?', ok: 'Yes', parameters: []
+                        sh "terraform apply -auto-approve -var 'datadog_api_key=${DATADOG_API_KEY}' -var 'datadog_app_key=${DATADOG_APP_KEY}'"
+                }
+            }
+            
+    }
+}
